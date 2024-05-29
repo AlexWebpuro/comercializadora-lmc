@@ -210,7 +210,7 @@ function filtrar_ordenes_por_location( $query ) {
 add_action( 'pre_get_posts', 'filtrar_ordenes_por_location' );
 
 function lmc_hide_nenus_to_seller() {
-    if ( current_user_can( 'admin_location' ) ) {
+    if ( current_user_can( 'admin_location' ) || current_user_can( 'seller_location' ) ) {
         // remove_menu_page( 'woocommerce' ); // WooCommerce main menu
 
         // Submenús específicos
