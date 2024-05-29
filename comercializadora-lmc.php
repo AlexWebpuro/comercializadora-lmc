@@ -211,14 +211,18 @@ add_action( 'pre_get_posts', 'filtrar_ordenes_por_location' );
 
 function lmc_hide_nenus_to_seller() {
     if ( current_user_can( 'admin_location' ) ) {
-        remove_menu_page( 'woocommerce' ); // WooCommerce main menu
+        // remove_menu_page( 'woocommerce' ); // WooCommerce main menu
 
         // Submenús específicos
+        remove_submenu_page( 'woocommerce', 'wc-admin' ); // Analytics 
         remove_submenu_page( 'woocommerce', 'wc-admin&path=/analytics/overview' ); // Analytics
+        remove_submenu_page( 'woocommerce', 'wc-admin&path=/customers' ); // Analytics
+        remove_submenu_page( 'woocommerce', 'wc-admin&path=/extensions' ); // Analytics
         remove_submenu_page( 'woocommerce', 'wc-reports' ); // Reports
         remove_submenu_page( 'woocommerce', 'wc-settings' ); // Settings
         remove_submenu_page( 'woocommerce', 'wc-status' ); // Status
         remove_submenu_page( 'woocommerce', 'wc-addons' ); // Addons
+        remove_submenu_page( 'users.php', 'users.php' );
 
         // Si quieres eliminar otros submenús de WooCommerce, puedes agregar más líneas aquí.
     }
@@ -238,11 +242,11 @@ function cargar_select2_admin() {
 // add_action( 'admin_enqueue_scripts', 'cargar_select2_admin' );
 
 
-add_action('wp_footer', function() {
-    $order = wc_get_order( 5589 );
-    // $temp = get_post_meta( 5583, 'Location', sanitize_text_field( $_POST['locationLMC'] ) );
-    dump($order);
-});
+// add_action('wp_footer', function() {
+//     $order = wc_get_order( 5600 );
+//     // $temp = get_post_meta( 5583, 'Location', sanitize_text_field( $_POST['locationLMC'] ) );
+//     dump($order);
+// });
 
 function lmc_test() {
     $user_id = get_current_user_id(); // Obtener el ID del usuario actualmente autenticado
@@ -252,4 +256,89 @@ function lmc_test() {
     // dump($user_meta, $user_id, get_userdata( get_current_user_id() )->allcaps);
 }
 
+function agregar_todas_las_taxonomias_location_al_producto($post_id, $post, $update) {
+    // Verificar que sea un producto y que no sea una actualización
+    if ($post->post_type != 'product' || $update) {
+        return;
+    }
+
+    // Obtener todas las taxonomías de 'location'
+    $terms = get_terms(array(
+        'taxonomy' => 'location',
+        'hide_empty' => false,
+    ));
+
+    if (!is_wp_error($terms) && !empty($terms)) {
+        $term_ids = wp_list_pluck($terms, 'term_id');
+        // Asignar todas las taxonomías 'location' al producto
+        wp_set_object_terms($post_id, $term_ids, 'location');
+    }
+    
+    // Hacer seguimiento de la cantidad de inventario de este producto por defecto
+    update_post_meta($post_id, '_manage_stock', 'yes');
+    update_post_meta($post_id, '_stock', 0); // Inicializar el stock en 0
+    update_post_meta($post_id, '_stock_status', 'instock'); // Establecer el estado del stock en 'instock'
+}
+add_action('save_post', 'agregar_todas_las_taxonomias_location_al_producto', 10, 3);
+
+
 // add_action('wp_footer', 'lmc_test', 10, 0 );
+
+function dump_submenus_woocommerce() {
+    global $submenu;
+
+    // Verificar si WooCommerce está activo
+    // dump($submenu['woocommerce']);
+    dump($submenu['users.php']);
+}
+
+// add_action( 'admin_footer', 'dump_submenus_woocommerce' );
+
+function obtener_meta_data_item_pedido( ) {
+    // Obtener el objeto del pedido
+    $order = wc_get_order( 5600 );
+    
+    // Verificar si el pedido es válido
+    if ( ! $order ) {
+        return;
+    }
+
+    // Obtener los ítems del pedido
+    $items = $order->get_items();
+
+    // Recorrer los ítems del pedido
+    foreach ( $items as $item_id => $item ) {
+        // Obtener la meta data del ítem
+        $meta_data = $item->get_meta_data();
+
+        // Mostrar la meta data del ítem (puedes ajustarlo según tus necesidades)
+        foreach ( $meta_data as $meta ) {
+            // dump($meta->key, $meta->value);
+            // echo 'Key: ' . $meta->key . '<br>';
+            // echo 'Value: ' . $meta->value . '<br>';
+        }
+    }
+    // 12 item id
+    // 5600 order id
+    // Update the itemmeta of the order item
+    // wc_update_order_item_meta($orderItemId, '_item_stock_locations_updated', 'yes');}
+    $order_item_id = 12;
+    $location = $order->get_meta('location');
+    $data = wc_update_order_item_meta($order_item_id, '_item_stock_updated_at_' . $location, 1);
+    $update = wc_update_order_item_meta($order_item_id, '_item_stock_updated_at_937', 'yes');
+    
+
+    // Save itemmeta _slw_data
+    $current_slw_data = wc_get_order_item_meta( $order_item_id, '_slw_data', true );
+    $new_data = array(
+        $location => array(
+            'location_name' 		=> 'Perrito',
+            'quantity_subtracted'	=> '1'
+        )
+    );
+    $_slw_data = wc_update_order_item_meta( $order_item_id, '_slw_data', $new_data );
+
+
+    dump($location,$data,$_slw_data, $update);
+}
+// add_action( 'wp_footer', 'obtener_meta_data_item_pedido' );
